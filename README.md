@@ -1,6 +1,6 @@
 # Sigma Technology Line Follower
 
-![Front Image](images/front_image.jpg)
+<!---![Front Image](images/front_image.jpg)---> 
 An ongoing project in creating an small robot that will follow a black line on a white background.
 
 ## Hardware
@@ -76,5 +76,6 @@ Enable one or both options. First one will show you a result as the 1 output pic
 
 
 ## Contributers
-[Måns Lerjefors](https://skies.sigmatechnology.se/main.asp?rID=1&alt=2&username=lms)  
+[Måns Lerjefors](https://skies.sigmatechnology.se/main.asp?rID=1&alt=2&username=lms)
+[Anton Lyngfelt](https://skies.sigmatechnology.se/main.asp?rID=1&alt=2&username=alt)
 [Martin Myhrman](https://skies.sigmatechnology.se/main.asp?rID=1&alt=2&username=miy)
