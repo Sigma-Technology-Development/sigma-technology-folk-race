@@ -1,7 +1,7 @@
 # Sigma Technology Line Follower
 
 <!---![Front Image](images/front_image.jpg)--->
-An ongoing project in creating an small robot that will follow a black line on a white background.
+An ongoing project in creating an small robot that will follow a black line on a white background. 
 
 ## Hardware
 
