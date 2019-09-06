@@ -1,5 +1,5 @@
-float encA;
-float encB;
+boolean encA;
+boolean encB;
 
 //Motor Pins in heading direction
 int EN_A_RIGHTMOTOR = 13;      //Enable pin for right motor
@@ -75,19 +75,20 @@ void setup ( ) {
 
 void loop()
 {
+  /*
     motor_speedL = maxspeed;
     motor_speedR = maxspeed;
     analogWrite(EN_A_RIGHTMOTOR, motor_speedL);
-    /*
+
     encA = digitalRead(outA);
     encB = digitalRead(outB);
     Serial.print(encA);
     Serial.print(' ');
     Serial.println(encB);
-    */
+
     analogWrite(EN_B_LEFTMOTOR, motor_speedR);
     delay(10);
-
+    */
     //motor_speedL = stopspeed;
     //motor_speedR = stopspeed;
     //analogWrite(EN_A, motor_speedL);
