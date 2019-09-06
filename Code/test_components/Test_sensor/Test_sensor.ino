@@ -1,4 +1,4 @@
-
+#include <QTRSensors.h>
 QTRSensors qtr;
 
 const uint8_t SensorCount = 8;
@@ -6,6 +6,7 @@ uint16_t sensorValues[SensorCount];
 
 void setup()
 {
+  Serial.begin(9600);
   // configure the sensors
   qtr.setTypeRC();
   qtr.setSensorPins((const uint8_t[]){13, 12, 11, 10, 9, 8, 7, 6}, SensorCount);
@@ -24,7 +25,7 @@ void setup()
   }
   digitalWrite(LED_BUILTIN, LOW); // turn off Arduino's LED to indicate we are through with calibration
 
-
+}
 void loop()
 {
     // read calibrated sensor values and obtain a measure of the line position
@@ -41,5 +42,5 @@ void loop()
     }
     Serial.println(position);
 
-    //delay(250);
+   // delay(250);
 }
