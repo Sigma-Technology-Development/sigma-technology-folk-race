@@ -23,8 +23,9 @@ volatile unsigned long rightCount = 1000;
 #include <QTRSensors.h>
 QTRSensors qtr;
 
-const uint8_t SensorCount = 8;
+const uint8_t SensorCount = 16;
 uint16_t sensorValues[SensorCount];
+uint16_t position;
 
 // **************************** MOTORS **************************
 
@@ -38,13 +39,27 @@ int IN3_LEFTMOTOR = 9;        //control pin for left motor
 int IN4_LEFTMOTOR = 8;        //control pin for left motor
 
 //Initializing variables to store data
-int slowest_speed = 45;
+int slowest_speed = 50;
 int motor_speedL = slowest_speed;
 int motor_speedR = slowest_speed;
 // Set speeds accordingly 0-min, 255-max
-int maxspeed = 100; //Max is 255
+int maxspeed = 200; //Max is 255
 int stopspeed = 25;
 int dir = 1;
+
+// **************************** PID regulator **************************
+//PID constants
+double kp = 2.5;
+double ki = 5;
+double kd = 1.5;
+
+unsigned long currentTime, previousTime;
+double elapsedTime;
+double error;
+double lastError;
+double input, output, setPoint;
+double cumError, rateError;
+int tolerance;
 
 void setup() {
 // **************************** ENCODERS **************************
@@ -61,7 +76,7 @@ void setup() {
 // **************************** LIGHT SENSORS **************************
 // configure the sensors
   qtr.setTypeRC();
-  qtr.setSensorPins((const uint8_t[]){A15, A13, A11, A9, A7, A5, A3, A1}, SensorCount);
+  qtr.setSensorPins((const uint8_t[]){A15,A14,A13,A12,A11,A10,A9,A8,A7,A6,A5,A4,A3,A2,A1,A0}, SensorCount);
   //qtr.setEmitterPin(2);
 
   delay(500);
@@ -96,8 +111,10 @@ void setup() {
   // Right motor
   digitalWrite(IN3_LEFTMOTOR, HIGH);
   digitalWrite(IN4_LEFTMOTOR, LOW);
-
-
+  
+// **************************** PID regulator **************************
+  setPoint = 7500;   //set point at the middle of the sensor
+  tolerance = 300;
   Serial.begin(9600);
 }
 
@@ -114,7 +131,7 @@ void loop() {
 // **************************** LIGHT SENSORS **************************
     // read calibrated sensor values and obtain a measure of the line position
     // from 0 to 5000 (for a white line, use readLineWhite() instead)
-    uint16_t position = qtr.readLineBlack(sensorValues);
+    position = qtr.readLineBlack(sensorValues);
 
     // print the sensor values as numbers from 0 to 1000, where 0 means maximum
     // reflectance and 1000 means minimum reflectance, followed by the line
@@ -129,33 +146,121 @@ void loop() {
     
     //Serial.println(position);
 
-// **************************** MOTORS **************************
-
-
-
-    if (position < 3000) {
-      motor_speedR = slowest_speed+((3000-position)/140);
-      motor_speedL = 0; // slowest_speed-((3000-position)/120);
+// **************************** OLD P-regulator **************************
+    /*
+    if (position < 3400) {
+      motor_speedR = slowest_speed+((3400-position)/100);
+      if (position < 3000) {
+        motor_speedL = 0;
+        }
+      else {
+        motor_speedL = slowest_speed*0.7-((3400-position)/100);
+        motor_speedL = abs(motor_speedL);
+        }
       }
-    else if(position > 4000) {
-      motor_speedR = 0; //slowest_speed-((position-4000)/120);
-      motor_speedL = slowest_speed+((position-4000)/140);
+    else if(position > 3600) {
+      motor_speedL = slowest_speed+((position-3600)/100);
+      if (position > 4000) {
+        motor_speedR = 0;
       }
+      else{
+        motor_speedR = slowest_speed*0.7-((position-3500)/100);
+        motor_speedR = abs(motor_speedR);
+        }
+      }
+      
     else{
       motor_speedR = motor_speedL = slowest_speed;
       }
-    motor_speedR = abs(motor_speedR);
-    motor_speedL = abs(motor_speedL);
-    //Serial.print("Right speed: ");
-    //Serial.println(motor_speedR);
-    //Serial.print("Left speed: ");
-    //Serial.println(motor_speedL);
-    //delay(20);
     analogWrite(EN_A_RIGHTMOTOR, motor_speedR);
-    analogWrite(EN_B_LEFTMOTOR, motor_speedL);      
+    analogWrite(EN_B_LEFTMOTOR, motor_speedL);   
+    */
+   /*
+    Serial.print("     Right speed: ");
+    Serial.println(motor_speedR);
+    Serial.print("                       Left speed: ");
+    Serial.println(motor_speedL);
+    delay(300);
+    */
+   
+    
+// **************************** PID regulator **************************
+    input = position;                         // value of the light sensors array (3500 is in the middle)
+    
+    if (input < setPoint - tolerance){
+      output = computePID(input);
+      motor_speedR = slowest_speed + output;
+      motor_speedL = slowest_speed - output*8;
+      if (motor_speedL < 0){
+        motor_speedL = 0;
+        }
+      }
+    else if(input > setPoint + tolerance){
+      output = computePID(input);
+      motor_speedL = slowest_speed + output;
+      motor_speedR = slowest_speed - output*8;
+      if (motor_speedR < 0){
+        motor_speedR = 0;
+        }
+      }
+    else{
+      motor_speedR = motor_speedL = slowest_speed;         
+    }
+    if(motor_speedR > 250){
+      motor_speedR = 250;
+      }  
+    if(motor_speedL > 250){
+      motor_speedL = 250;
+      }  
+      
+    analogWrite(EN_A_RIGHTMOTOR, motor_speedR); //control the motors based on PID value
+    analogWrite(EN_B_LEFTMOTOR, motor_speedL);     
+    /*
+    Serial.print("     Right speed: ");
+    Serial.println(motor_speedR);
+    Serial.print("                       Left speed: ");
+    Serial.println(motor_speedL);
+    
+    Serial.print("Position: ");
+    Serial.println(input);
+    
+    delay(200);
+    */
+          
+
 }
 
+// **************************** PID regulator **************************
+double computePID(double inp){     
+        currentTime = millis();                              //get current time
+        elapsedTime = (double)(currentTime - previousTime);  //compute time elapsed from previous computation
+        
+        if (inp > setPoint){
+          error = inp - setPoint;                         // determine error          
+          }
+        else if(inp < setPoint){
+          error = setPoint - inp;                         // determine error          
+          }  
 
+        cumError = error * elapsedTime;                // compute integral
+        rateError = (error - lastError)/elapsedTime;    // compute derivative
+
+        double out = kp*error + ki*cumError + kd*rateError;        //PID output     
+         /*
+        Serial.print("P: ");
+        Serial.println(kp*error);
+        Serial.print("             I: ");
+        Serial.println(ki*cumError);
+        Serial.print("                           D: ");
+        Serial.println(kd*rateError);
+        Serial.print("                                      Output ");
+        Serial.println(out/10000);          
+        */
+        lastError = error;                                //remember current error
+        previousTime = currentTime;                        //remember current time
+
+        return out/10000;//14250000;                              //have function return the PID output
+}
 
 // **************************** INTERRUPT FUNCTIONS (ENCODERS) **************************
 
