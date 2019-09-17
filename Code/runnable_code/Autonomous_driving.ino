@@ -39,19 +39,17 @@ int IN3_LEFTMOTOR = 9;        //control pin for left motor
 int IN4_LEFTMOTOR = 8;        //control pin for left motor
 
 //Initializing variables to store data
-int slowest_speed = 50;
+int slowest_speed = 55;
 int motor_speedL = slowest_speed;
 int motor_speedR = slowest_speed;
 // Set speeds accordingly 0-min, 255-max
 int maxspeed = 200; //Max is 255
-int stopspeed = 25;
-int dir = 1;
 
 // **************************** PID regulator **************************
 //PID constants
-double kp = 2.5;
-double ki = 5;
-double kd = 1.5;
+double kp = 4;
+double ki = 10;
+double kd = 6;
 
 unsigned long currentTime, previousTime;
 double elapsedTime;
@@ -131,6 +129,7 @@ void loop() {
 // **************************** LIGHT SENSORS **************************
     // read calibrated sensor values and obtain a measure of the line position
     // from 0 to 5000 (for a white line, use readLineWhite() instead)
+    
     position = qtr.readLineBlack(sensorValues);
 
     // print the sensor values as numbers from 0 to 1000, where 0 means maximum
@@ -145,7 +144,51 @@ void loop() {
     */
     
     //Serial.println(position);
+    
+// **************************** PID regulator **************************
+    input = position;                         // value of the light sensors array (7500 is in the middle)
+    //input = qtr.readLineBlack(sensorValues);
 
+    
+    if (input < setPoint - tolerance){
+      output = computePID(input);
+      motor_speedR = slowest_speed + output;
+      motor_speedL = slowest_speed - output*70;
+      if (motor_speedL < 0){
+        motor_speedL = 0;
+        }
+      }
+    else if(input > setPoint + tolerance){
+      output = computePID(input);
+      motor_speedL = slowest_speed + output;
+      motor_speedR = slowest_speed - output*70;
+      if (motor_speedR < 0){
+        motor_speedR = 0;
+        }
+      }
+    else{
+      motor_speedR = motor_speedL = slowest_speed;         
+    }
+    if(motor_speedR > maxspeed){
+      motor_speedR = maxspeed;
+      }  
+    if(motor_speedL > maxspeed){
+      motor_speedL = maxspeed;
+      }  
+      
+    analogWrite(EN_A_RIGHTMOTOR, motor_speedR); //control the motors based on PID value
+    analogWrite(EN_B_LEFTMOTOR, motor_speedL);     
+    /*
+    Serial.print("     Right speed: ");
+    Serial.println(motor_speedR);
+    Serial.print("                       Left speed: ");
+    Serial.println(motor_speedL);
+    
+    Serial.print("Position: ");
+    Serial.println(input);
+    */
+    //delay(200);
+    
 // **************************** OLD P-regulator **************************
     /*
     if (position < 3400) {
@@ -181,53 +224,7 @@ void loop() {
     Serial.print("                       Left speed: ");
     Serial.println(motor_speedL);
     delay(300);
-    */
-   
-    
-// **************************** PID regulator **************************
-    input = position;                         // value of the light sensors array (3500 is in the middle)
-    
-    if (input < setPoint - tolerance){
-      output = computePID(input);
-      motor_speedR = slowest_speed + output;
-      motor_speedL = slowest_speed - output*8;
-      if (motor_speedL < 0){
-        motor_speedL = 0;
-        }
-      }
-    else if(input > setPoint + tolerance){
-      output = computePID(input);
-      motor_speedL = slowest_speed + output;
-      motor_speedR = slowest_speed - output*8;
-      if (motor_speedR < 0){
-        motor_speedR = 0;
-        }
-      }
-    else{
-      motor_speedR = motor_speedL = slowest_speed;         
-    }
-    if(motor_speedR > 250){
-      motor_speedR = 250;
-      }  
-    if(motor_speedL > 250){
-      motor_speedL = 250;
-      }  
-      
-    analogWrite(EN_A_RIGHTMOTOR, motor_speedR); //control the motors based on PID value
-    analogWrite(EN_B_LEFTMOTOR, motor_speedL);     
-    /*
-    Serial.print("     Right speed: ");
-    Serial.println(motor_speedR);
-    Serial.print("                       Left speed: ");
-    Serial.println(motor_speedL);
-    
-    Serial.print("Position: ");
-    Serial.println(input);
-    
-    delay(200);
-    */
-          
-
+    */    
 }
 
 // **************************** PID regulator **************************
@@ -244,9 +241,10 @@ double computePID(double inp){
 
         cumError = error * elapsedTime;                // compute integral
         rateError = (error - lastError)/elapsedTime;    // compute derivative
-
+        rateError = abs(rateError);
+        
         double out = kp*error + ki*cumError + kd*rateError;        //PID output     
-         /*
+        /*
         Serial.print("P: ");
         Serial.println(kp*error);
         Serial.print("             I: ");
@@ -255,6 +253,8 @@ double computePID(double inp){
         Serial.println(kd*rateError);
         Serial.print("                                      Output ");
         Serial.println(out/10000);          
+        Serial.print("                                                  elapsedTime: ");
+        Serial.println(elapsedTime);      
         */
         lastError = error;                                //remember current error
         previousTime = currentTime;                        //remember current time
