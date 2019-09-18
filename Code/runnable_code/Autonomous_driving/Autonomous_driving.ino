@@ -47,9 +47,9 @@ int maxspeed = 200; //Max is 255
 
 // **************************** PID regulator **************************
 //PID constants
-double kp = 4;
-double ki = 10;
-double kd = 6;
+double kp = 30;
+double ki = 0;
+double kd = 0;
 
 unsigned long currentTime, previousTime;
 double elapsedTime;
